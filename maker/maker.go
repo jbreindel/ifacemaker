@@ -124,7 +124,12 @@ func GetReceiverType(fd *ast.FuncDecl) (ast.Expr, error) {
 // param or return value as a single string.
 // If the FieldList input is nil, it returns
 // nil
-func FormatFieldList(src []byte, fl *ast.FieldList, pkgName string, declaredTypes []declaredType) []string {
+func FormatFieldList(
+	src []byte,
+	fl *ast.FieldList,
+	pkgName string,
+	declaredTypes []declaredType,
+) []string {
 	if fl == nil {
 		return nil
 	}
@@ -180,7 +185,11 @@ func FormatCode(code string) ([]byte, error) {
 // to an array, joins this array to a string
 // with newline and passes it on to FormatCode
 // which then directly returns the result
-func MakeInterface(comment, pkgName, ifaceName, ifaceComment string, methods []string, imports []string) ([]byte, error) {
+func MakeInterface(
+	comment, pkgName, ifaceName, ifaceComment string,
+	methods []string,
+	imports []string,
+) ([]byte, error) {
 	output := []string{
 		"// " + comment,
 		"",
@@ -238,7 +247,16 @@ func ParseDeclaredTypes(src []byte) (declaredTypes []declaredType) {
 // not, the imports not used will be removed later using the
 // 'imports' pkg If anything goes wrong, this method will
 // fatally stop the execution
-func ParseStruct(src []byte, structName string, copyDocs bool, copyTypeDocs bool, pkgName string, declaredTypes []declaredType, importModule string, withNotExported bool) (methods []Method, imports []string, typeDoc string) {
+func ParseStruct(
+	src []byte,
+	structName string,
+	copyDocs bool,
+	copyTypeDocs bool,
+	pkgName string,
+	declaredTypes []declaredType,
+	importModule string,
+	withNotExported bool,
+) (methods []Method, imports []string, typeDoc string) {
 	fset := token.NewFileSet()
 	a, err := parser.ParseFile(fset, "", src, parser.ParseComments)
 	if err != nil {
@@ -265,7 +283,12 @@ func ParseStruct(src []byte, structName string, copyDocs bool, copyTypeDocs bool
 			params := FormatFieldList(src, fd.Type.Params, pkgName, declaredTypes)
 			ret := FormatFieldList(src, fd.Type.Results, pkgName, declaredTypes)
 			mName := fd.Name.String()
-			method := fmt.Sprintf("%s(%s) (%s)", mName, strings.Join(params, ", "), strings.Join(ret, ", "))
+			method := fmt.Sprintf(
+				"%s(%s) (%s)",
+				mName,
+				strings.Join(params, ", "),
+				strings.Join(ret, ", "),
+			)
 			var docs []string
 			if fd.Doc != nil && copyDocs {
 				for _, d := range fd.Doc.List {
@@ -341,12 +364,6 @@ func Make(options MakeOptions) ([]byte, error) {
 			return []byte{}, err
 		}
 		types := ParseDeclaredTypes(b)
-		// validate structs from file against input struct Type
-		if !validateStructType(types, options.StructType) {
-			return []byte{},
-				fmt.Errorf("%q structtype not found in input files",
-					options.StructType)
-		}
 		for _, t := range types {
 			if _, ok := tset[t.Fullname()]; !ok {
 				allDeclaredTypes = append(allDeclaredTypes, t)
@@ -366,7 +383,16 @@ func Make(options MakeOptions) ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
-		methods, imports, parsedTypeDoc := ParseStruct(src, options.StructType, options.CopyDocs, options.CopyTypeDoc, options.PkgName, allDeclaredTypes, options.ImportModule, options.WithNotExported)
+		methods, imports, parsedTypeDoc := ParseStruct(
+			src,
+			options.StructType,
+			options.CopyDocs,
+			options.CopyTypeDoc,
+			options.PkgName,
+			allDeclaredTypes,
+			options.ImportModule,
+			options.WithNotExported,
+		)
 		for _, m := range methods {
 			if _, ok := excludedMethods[m.Name]; ok {
 				continue
@@ -392,7 +418,14 @@ func Make(options MakeOptions) ([]byte, error) {
 		options.IfaceComment = fmt.Sprintf("%s\n%s", options.IfaceComment, typeDoc)
 	}
 
-	result, err := MakeInterface(options.Comment, options.PkgName, options.IfaceName, options.IfaceComment, allMethods, allImports)
+	result, err := MakeInterface(
+		options.Comment,
+		options.PkgName,
+		options.IfaceName,
+		options.IfaceComment,
+		allMethods,
+		allImports,
+	)
 	if err != nil {
 		return nil, err
 	}
