@@ -8,7 +8,7 @@ makes unit testing easier.
 ## Install
 
 ```
-go install github.com/vburenin/ifacemaker@latest
+go install .
 ```
 
 ## Usage
