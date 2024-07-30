@@ -133,6 +133,8 @@ func FormatFieldList(
 	if fl == nil {
 		return nil
 	}
+	pattern := `\.{3}func\(\*(Options)\)`
+	re := regexp.MustCompile(pattern)
 	var parts []string
 	for _, l := range fl.List {
 		names := make([]string, len(l.Names))
@@ -140,12 +142,26 @@ func FormatFieldList(
 			names[i] = n.Name
 		}
 		t := string(src[l.Type.Pos()-1 : l.Type.End()-1])
+		matches := re.FindStringSubmatch(t)
+		isFunc := len(matches) > 1
 
 		for _, dt := range declaredTypes {
+			// TODO handle pointers
 			if t == dt.Name && pkgName != dt.Package {
 				// The type of this field is the same as one declared in the source package,
 				// and the source package is not the same as the destination package.
 				t = dt.Fullname()
+				break
+			}
+			if trimmed, ok := strings.CutPrefix(t, "*"); ok {
+				if trimmed == dt.Name && pkgName != dt.Package {
+					t = fmt.Sprintf("*%s", dt.Fullname())
+					break
+				}
+			}
+			if isFunc && matches[1] == dt.Name {
+				t = fmt.Sprintf("...func(*%s)", dt.Fullname())
+				break
 			}
 		}
 
@@ -364,6 +380,7 @@ func Make(options MakeOptions) ([]byte, error) {
 			return []byte{}, err
 		}
 		types := ParseDeclaredTypes(b)
+		// validate structs from file against input struct Type
 		for _, t := range types {
 			if _, ok := tset[t.Fullname()]; !ok {
 				allDeclaredTypes = append(allDeclaredTypes, t)
